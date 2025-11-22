@@ -1,112 +1,296 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supabase 連線診斷工具</title>
+    <title>香港信用卡消費助手 (Supabase版)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background: #f4f4f9; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        h2 { margin-top: 0; color: #333; }
-        label { display: block; margin-top: 10px; font-weight: bold; }
-        input { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        button { margin-top: 20px; width: 100%; padding: 10px; background: #2ecc71; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
-        button:hover { background: #27ae60; }
-        #result { margin-top: 20px; padding: 15px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; display: none; }
-        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        body {
+            background-color: #f3f4f6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .card-item {
+            transition: transform 0.2s;
+        }
+        .card-item:active {
+            transform: scale(0.98);
+        }
+        .tag {
+            font-size: 0.75rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.25rem;
+            margin-right: 0.25rem;
+            display: inline-block;
+            margin-bottom: 0.25rem;
+        }
+        .tag-bank { background-color: #e5e7eb; color: #374151; }
+        .highlight-rate {
+            color: #dc2626;
+            font-weight: 800;
+            font-size: 1.25rem;
+        }
+        /* Loading Spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 30px;
+            height: 30px;
+            -webkit-animation: spin 1s linear infinite; /* Safari */
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
-<body>
+<body class="pb-10">
 
-<div class="card">
-    <h2>Supabase 連線診斷</h2>
-    <p>請輸入你的 Supabase 資料，點擊測試按鈕，我會告訴你哪裡出錯了。</p>
+    <!-- Header -->
+    <div class="bg-green-600 text-white p-4 shadow-md sticky top-0 z-50">
+        <h1 class="text-xl font-bold text-center">💳 雲端信用卡助手</h1>
+        <p class="text-center text-green-100 text-xs mt-1">資料來源：Supabase Database</p>
+    </div>
 
-    <label>Supabase URL (網址):</label>
-    <input type="text" id="url" placeholder="https://xyz.supabase.co">
+    <!-- Search Form -->
+    <div class="p-4 max-w-md mx-auto bg-white shadow-sm rounded-b-xl mb-4">
+        <div class="grid grid-cols-1 gap-4">
+            
+            <!-- Scenario -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">消費場景 (買甚麼?)</label>
+                <select id="categorySelect" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none bg-gray-50">
+                    <option value="all">顯示所有 (All)</option>
+                    <option value="dining">🍽️ 餐飲 / 食肆</option>
+                    <option value="online">🛒 網上購物 / 網購</option>
+                    <option value="supermarket">🥦 超市 / 百貨 / 生活</option>
+                    <option value="travel">✈️ 旅遊 / 酒店 / 外幣</option>
+                    <option value="transport">🚌 交通 / 車費</option>
+                    <option value="entertainment">🎬 娛樂 (電影/串流)</option>
+                    <option value="mobile">📱 手機支付 (Apple/Google Pay)</option>
+                </select>
+            </div>
 
-    <label>Supabase Anon Key (金鑰):</label>
-    <input type="text" id="key" placeholder="eyJhbGciOiJIUzI1NiIsIn...">
+            <!-- Region -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">簽帳地區</label>
+                <select id="regionSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none bg-gray-50">
+                    <option value="local">🇭🇰 本地 (Local)</option>
+                    <option value="overseas">🌏 海外 / 外幣 (Overseas)</option>
+                    <option value="china">🇨🇳 內地 (China)</option>
+                    <option value="japan">🇯🇵 日本 (Japan)</option>
+                </select>
+            </div>
 
-    <label>Table Name (資料表名稱):</label>
-    <input type="text" id="table" value="credit_cards_2025" placeholder="credit_cards_2025">
+            <button onclick="filterCards()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 shadow-lg">
+                🔍 立即搜尋
+            </button>
+        </div>
+    </div>
 
-    <button onclick="testConnection()">開始測試連線</button>
+    <!-- Results -->
+    <div class="max-w-md mx-auto px-4">
+        <div class="flex justify-between items-center mb-2">
+            <h2 class="text-lg font-bold text-gray-800">推薦結果</h2>
+            <span id="resultCount" class="text-sm text-gray-500"></span>
+        </div>
+        
+        <div id="loadingState" class="text-center py-10">
+            <div class="loader mb-2"></div>
+            <p class="text-gray-500 text-sm">正在連線至 Supabase 資料庫...</p>
+        </div>
 
-    <div id="result"></div>
-</div>
+        <div id="errorState" class="hidden text-center py-10 text-red-500 bg-red-50 rounded-lg p-4">
+            <p class="font-bold">讀取失敗</p>
+            <p class="text-xs mt-1" id="errorMessage">請檢查網絡或 API Key 設定</p>
+        </div>
+        
+        <div id="cardList" class="space-y-3 hidden">
+            <!-- Cards will be injected here -->
+        </div>
+    </div>
 
-<script>
-    async function testConnection() {
-        const url = document.getElementById('url').value.trim();
-        const key = document.getElementById('key').value.trim();
-        const table = document.getElementById('table').value.trim();
-        const resultDiv = document.getElementById('result');
+    <script>
+        // --- 1. Supabase Configuration ---
+        const SUPABASE_URL = 'https://vywsazyaqfjkahhjirme.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5d3NhenlhcWZqa2FoaGppcm1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3NzU5NjgsImV4cCI6MjA3OTM1MTk2OH0.Jp2L0sGtN3KNrA7lbP3R3g6HE0RMJkG2wjdfhQ3iMjA';
+        const TABLE_NAME = 'Cards from AI_2025.11';
 
-        resultDiv.style.display = 'block';
-        resultDiv.className = '';
-        resultDiv.innerText = '測試中...';
+        // Initialize Client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        if (!url || !key || !table) {
-            showError('請填寫所有欄位！');
-            return;
+        let cardsData = [];
+
+        // --- 2. Fetch Data Logic ---
+        async function fetchCardsFromSupabase() {
+            const loadingDiv = document.getElementById('loadingState');
+            const listDiv = document.getElementById('cardList');
+            const errorDiv = document.getElementById('errorState');
+
+            try {
+                // Select all columns from the table
+                const { data, error } = await supabase
+                    .from(TABLE_NAME)
+                    .select('*');
+
+                if (error) throw error;
+
+                cardsData = data;
+                
+                // Hide loading, show list
+                loadingDiv.classList.add('hidden');
+                listDiv.classList.remove('hidden');
+                
+                console.log("Data loaded:", cardsData.length, "rows");
+                
+                // Initial Filter
+                filterCards();
+
+            } catch (err) {
+                console.error('Supabase Error:', err);
+                loadingDiv.classList.add('hidden');
+                errorDiv.classList.remove('hidden');
+                document.getElementById('errorMessage').innerText = err.message || "無法讀取資料表";
+            }
         }
 
-        try {
-            // 建立連線
-            const supabase = window.supabase.createClient(url, key);
-            
-            // 嘗試抓取 1 筆資料
-            const { data, error } = await supabase
-                .from(table)
-                .select('*')
-                .limit(1);
+        // --- 3. Keyword Mapping (Same as before) ---
+        const keywords = {
+            dining: ['餐飲', '食肆', '所有消費', 'Dining', '必勝客', 'KFC', '麥當勞'],
+            online: ['網上', '網購', '所有消費', 'Online', 'Amazon', 'Netflix'],
+            supermarket: ['超市', '百貨', '所有消費', '惠康', '百佳', '萬寧', '屈臣氏', '7-11', '759', 'SOGO', 'IKEA'],
+            travel: ['旅遊', '外幣', '海外', '酒店', '所有消費', '航空', '里數', 'Lounge', '國泰'],
+            transport: ['交通', '車費', '隧道', '九巴', '所有消費', '入油'],
+            entertainment: ['娛樂', '電影', '戲院', 'Netflix', 'Disney+', '所有消費'],
+            mobile: ['手機支付', 'Apple Pay', 'Google Pay', '所有消費']
+        };
 
-            if (error) {
-                // 捕捉到 Supabase 回傳的錯誤
-                let msg = `❌ 連線失敗 (錯誤代碼: ${error.code})\n`;
-                msg += `錯誤訊息: ${error.message}\n\n`;
-                
-                if (error.code === 'PGRST301' || error.message.includes('relation') && error.message.includes('does not exist')) {
-                    msg += '👉 原因推測：資料表名稱錯誤。\n請檢查 Supabase 資料庫裡真的有一個叫 "' + table + '" 的表嗎？';
-                } else if (error.code === '401' || error.message.includes('JWT')) {
-                    msg += '👉 原因推測：Key 填錯了，或者是 URL 填錯。\n請確認複製的是 "anon" key 而不是 "service_role" key。';
-                } else if (error.code === '42501' || error.message.includes('permission denied')) {
-                    msg += '👉 原因推測：權限 (RLS) 被擋住了。\n即使 Key 對了，但資料庫設定不允許讀取。';
-                }
-                
-                showError(msg);
-            } else {
-                // 成功
-                let msg = '✅ 連線成功！\n';
-                if (data.length === 0) {
-                    msg += '但是資料表是空的 (沒有任何資料)。\n請去 Supabase 插入幾筆資料測試。';
+        const regionKeywords = {
+            local: ['本地', '所有地區', '全球'],
+            overseas: ['海外', '外幣', '所有地區', '全球'],
+            china: ['內地', '大灣區', '所有地區', '全球'],
+            japan: ['日本', '所有地區', '全球', '外幣']
+        };
+
+        // --- 4. Filter Logic ---
+        function filterCards() {
+            const cat = document.getElementById('categorySelect').value;
+            const region = document.getElementById('regionSelect').value;
+            
+            const results = cardsData.filter(card => {
+                // Safe access to properties (handle nulls)
+                const cardRegion = (card['簽帳地區'] || '').toLowerCase();
+                const cardMerchants = (card['指定商戶'] || '').toLowerCase();
+                const cardType = (card['消費種類'] || '').toLowerCase();
+                const cardName = (card['卡名'] || '').toLowerCase();
+                const cardNote = (card['備註'] || '').toLowerCase();
+
+                // 1. Region Check
+                let regionMatch = false;
+                if (region === 'japan') {
+                    if (cardRegion.includes('日本') || cardMerchants.includes('日本') || cardRegion.includes('全球') || cardRegion.includes('所有地區')) regionMatch = true;
+                    if (cardRegion.includes('本地') && !cardRegion.includes('所有')) regionMatch = false;
                 } else {
-                    msg += `成功讀取到資料！\n第一筆資料 ID: ${data[0].id || '無 ID 欄位'}\n\n這代表你的 Key 和 URL 都是對的。問題可能出在原本網頁的程式碼寫法。`;
+                    const targetRegions = regionKeywords[region];
+                    regionMatch = targetRegions.some(k => cardRegion.includes(k));
                 }
-                showSuccess(msg);
+
+                // 2. Category Check
+                let catMatch = false;
+                if (cat === 'all') {
+                    catMatch = true;
+                } else {
+                    const targetKeywords = keywords[cat];
+                    const combinedText = (cardType + cardMerchants + cardName + cardNote).toLowerCase();
+                    catMatch = targetKeywords.some(k => combinedText.includes(k.toLowerCase()));
+                }
+
+                return regionMatch && catMatch;
+            });
+
+            // Sort Logic
+            results.sort((a, b) => {
+                const getRate = (str) => {
+                    if (!str) return 0;
+                    const match = str.match(/(\d+(\.\d+)?)%/);
+                    return match ? parseFloat(match[1]) : 0;
+                };
+                
+                const rateA = getRate(a['回贈數值']);
+                const rateB = getRate(b['回贈數值']);
+                return rateB - rateA;
+            });
+
+            renderCards(results);
+        }
+
+        // --- 5. Render Logic ---
+        function renderCards(cards) {
+            const container = document.getElementById('cardList');
+            const countLabel = document.getElementById('resultCount');
+            container.innerHTML = '';
+            countLabel.textContent = `共 ${cards.length} 張卡`;
+
+            if (cards.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-8">找不到符合條件的信用卡 🥲</div>';
+                return;
             }
 
-        } catch (err) {
-            // 捕捉到網路或程式錯誤
-            showError(`❌ 發生未預期的錯誤：\n${err.message}\n\n👉這通常是 URL 格式完全錯誤，或是網路連不上。`);
+            cards.forEach(card => {
+                const div = document.createElement('div');
+                div.className = 'bg-white p-4 rounded-xl shadow-sm border border-gray-100 card-item flex flex-col gap-2';
+                
+                // Highlight Rate Logic
+                let rateDisplay = card['回贈數值'] || 'N/A';
+                if(rateDisplay.includes('/里')) {
+                    rateDisplay = `<span class="text-blue-600 text-lg font-bold">${rateDisplay}</span>`;
+                } else {
+                    rateDisplay = `<span class="highlight-rate">${rateDisplay}</span>`;
+                }
+
+                // Handle potential null values
+                const bank = card['發卡機構'] || '';
+                const name = card['卡名'] || '未命名卡片';
+                const rewardType = card['回饋種類'] || '';
+                const merchant = card['指定商戶'] === '不限' ? '所有消費' : (card['指定商戶'] || '不限');
+                const limit = card['簽帳上限'] || 'N/A';
+                const note = card['備註'];
+
+                div.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="tag tag-bank">${bank}</span>
+                            <h3 class="font-bold text-gray-800 text-lg leading-tight">${name}</h3>
+                        </div>
+                        <div class="text-right min-w-[80px]">
+                            ${rateDisplay}
+                            <div class="text-xs text-gray-400">${rewardType}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-sm text-gray-600 mt-1">
+                        <span class="font-semibold text-gray-500">🎯 指定商戶/類別:</span> ${merchant}
+                    </div>
+
+                    <div class="bg-gray-50 p-2 rounded text-xs text-gray-500 mt-2">
+                        <p>⚠️ <strong>上限:</strong> ${limit}</p>
+                        ${note ? `<p class="mt-1 text-green-600">💡 ${note}</p>` : ''}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
         }
-    }
 
-    function showError(msg) {
-        const div = document.getElementById('result');
-        div.className = 'error';
-        div.innerText = msg;
-    }
+        // Start fetching on load
+        window.onload = fetchCardsFromSupabase;
 
-    function showSuccess(msg) {
-        const div = document.getElementById('result');
-        div.className = 'success';
-        div.innerText = msg;
-    }
-</script>
-
+    </script>
 </body>
 </html>
