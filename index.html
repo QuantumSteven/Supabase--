@@ -1,93 +1,354 @@
-<!DOCTYPE html>
-<html lang="zh-HK">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supabase 連線測試</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body class="bg-gray-100 p-4">
+import React, { useState } from 'react';
+import { Calendar, DollarSign, MapPin, Utensils, Star, Clock, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
-    <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow">
-        <h1 class="text-2xl font-bold mb-4">Supabase 連線診斷</h1>
-        
-        <div class="mb-4">
-            <p class="font-bold">狀態：</p>
-            <div id="status" class="text-blue-600">正在連線...</div>
+// Mock Data based on user's itinerary and OpenRice info
+const itineraryData = [
+  {
+    date: "12月25日 (四)",
+    title: "聖誕節 Christmas",
+    totalBudget: "$500",
+    activities: [
+      {
+        type: "activity",
+        name: "M+ 博物館參觀",
+        location: "西九文化區",
+        time: "下午",
+        highlight: "郭培：藝想天開展覽 (需購票)",
+        description: "欣賞中國傳奇高訂時尚設計師的精彩作品，感受節日藝術氣氛。"
+      },
+      {
+        type: "dining",
+        name: "PHI Coffee & Pancake",
+        location: "美孚",
+        time: "晚餐",
+        budget: "$400 - $600",
+        cuisine: "西式 / 甜品",
+        rating: 4.0,
+        mustTry: [
+          "梳乎厘班戟 (原味/抹茶)",
+          "All Day Breakfast",
+          "明太子意粉",
+          "Tiramisu Coffee"
+        ],
+        tips: "聖誕正日建議提早訂座，梳乎厘班戟製作需時，建議一坐下先點。"
+      }
+    ]
+  },
+  {
+    date: "12月26日 (五)",
+    title: "Boxing Day",
+    totalBudget: "$500",
+    activities: [
+      {
+        type: "activity",
+        name: "香港故宮文化博物館",
+        location: "西九文化區",
+        time: "下午",
+        highlight: "中華文明溯源 (展廳8)",
+        description: "探索中華文明起源，適合喜歡歷史文化的行程。"
+      },
+      {
+        type: "dining",
+        name: "泰嘟嘟 (Thai Do Do)",
+        location: "尖沙咀",
+        time: "晚餐",
+        budget: "$400 - $600",
+        cuisine: "泰國菜",
+        rating: 4.5,
+        mustTry: [
+          "粉絲大蝦煲 (食評大讚)",
+          "炭燒豬頸肉",
+          "泰式生蝦",
+          "椰青"
+        ],
+        tips: "網上訂座可賺 Rice Dollars。性價比高，份量足，適合分享。"
+      }
+    ]
+  },
+  {
+    date: "12月28日 (日)",
+    title: "紀念日 Anniversary",
+    totalBudget: "$3,800+",
+    isSpecial: true,
+    activities: [
+      {
+        type: "dining",
+        name: "Cupping Room",
+        location: "故宮博物館",
+        time: "午餐",
+        budget: "$400 - $500",
+        cuisine: "西式 Cafe",
+        rating: 3.8,
+        mustTry: [
+          "Avocado Toast",
+          "Eggs Benedict",
+          "Hand Drip Coffee",
+          "Basque Burnt Cheesecake"
+        ],
+        tips: "國泰會員用 App 付款可賺里數。景觀優美，適合打卡。"
+      },
+      {
+        type: "dining",
+        name: "璞 (Mosu Hong Kong)",
+        location: "M+",
+        time: "晚餐 (重頭戲)",
+        budget: "$3,000+",
+        cuisine: "高級創新韓菜 (Fine Dining)",
+        rating: 4.8,
+        mustTry: [
+          "Tasting Menu (時令菜單)",
+          "鮑魚塔 (招牌)",
+          "橡果麵"
+        ],
+        tips: "米芝蓮級別體驗。留意衣著要求 (Smart Casual)。預留 2-3 小時用餐時間。"
+      }
+    ]
+  },
+  {
+    date: "12月29日 (一)",
+    title: "生日 Birthday",
+    totalBudget: "$950",
+    isSpecial: true,
+    activities: [
+      {
+        type: "dining",
+        name: "RUE DU LIBAN",
+        location: "尖沙咀",
+        time: "晚餐",
+        budget: "$800 - $1,000",
+        cuisine: "黎巴嫩菜",
+        rating: 4.4,
+        mustTry: [
+          "慢煮羊腿 (Lamb Shank)",
+          "烤牛肋骨",
+          "Hummus (鷹嘴豆泥)",
+          "Pita Bread"
+        ],
+        tips: "OpenRice 網上訂座有 85 折優惠！份量較大，建議前菜不要點太多。"
+      }
+    ]
+  },
+  {
+    date: "12月31日 (三)",
+    title: "除夕 New Year's Eve",
+    totalBudget: "$1,000",
+    activities: [
+      {
+        type: "dining",
+        name: "PASTEAKO",
+        location: "尖沙咀",
+        time: "晚餐",
+        budget: "$900 - $1,100",
+        cuisine: "意粉 & 牛扒",
+        rating: 4.2,
+        mustTry: [
+          "晚市套餐 ($388/位)",
+          "任食意粉 (Spinach / Truffle)",
+          "Flat Iron Steak",
+          "Tiramisu"
+        ],
+        tips: "除夕夜尖沙咀人多封路，建議提早到達。意粉任食是賣點，適合大胃王。"
+      },
+      {
+        type: "activity",
+        name: "除夕倒數",
+        location: "尖沙咀海旁 / 維港",
+        time: "深夜",
+        highlight: "煙花匯演",
+        description: "在維港兩岸迎接 2026 年，感受熱鬧氣氛。"
+      }
+    ]
+  }
+];
+
+const ItineraryCard = ({ day, isOpen, toggleOpen }) => {
+  return (
+    <div className={`mb-4 border rounded-xl overflow-hidden transition-all duration-300 ${day.isSpecial ? 'border-amber-400 bg-amber-50/30' : 'border-slate-200 bg-white'}`}>
+      <div 
+        className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50"
+        onClick={toggleOpen}
+      >
+        <div className="flex items-center gap-4">
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm ${day.isSpecial ? 'bg-amber-500' : 'bg-blue-600'}`}>
+            {day.date.split(' ')[0].split('月')[1]}
+          </div>
+          <div>
+            <h3 className="font-bold text-lg text-slate-800">{day.date}</h3>
+            <p className="text-sm text-slate-500 font-medium">{day.title}</p>
+          </div>
         </div>
-
-        <div class="mb-4">
-            <p class="font-bold">資料庫回傳筆數：</p>
-            <div id="count" class="text-xl font-mono">0</div>
+        <div className="flex items-center gap-4">
+          <div className="text-right hidden sm:block">
+            <p className="text-xs text-slate-400">預算</p>
+            <p className="font-bold text-green-600">{day.totalBudget}</p>
+          </div>
+          {isOpen ? <ChevronUp className="text-slate-400" /> : <ChevronDown className="text-slate-400" />}
         </div>
+      </div>
 
-        <div class="mb-4">
-            <p class="font-bold">偵測到的欄位名稱 (Keys)：</p>
-            <div id="columns" class="bg-gray-100 p-2 rounded text-sm font-mono text-red-600 break-all">
-                (等待資料...)
-            </div>
-            <p class="text-xs text-gray-500 mt-1">如果這裡是英文 (如 card_name)，請告訴我，我需要修改程式碼。</p>
-        </div>
-
-        <div>
-            <p class="font-bold">第一筆資料預覽 (Raw Data)：</p>
-            <pre id="rawData" class="bg-gray-800 text-green-400 p-4 rounded text-xs overflow-auto max-h-60">
-(等待資料...)
-            </pre>
-        </div>
-    </div>
-
-    <script>
-        // 設定
-        const SUPABASE_URL = 'https://vywsazyaqfjkahhjirme.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5d3NhenlhcWZqa2FoaGppcm1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3NzU5NjgsImV4cCI6MjA3OTM1MTk2OH0.Jp2L0sGtN3KNrA7lbP3R3g6HE0RMJkG2wjdfhQ3iMjA';
-        const TABLE_NAME = 'Cards from AI_2025.11';
-
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        async function testConnection() {
-            const statusDiv = document.getElementById('status');
-            const rawDiv = document.getElementById('rawData');
-            const countDiv = document.getElementById('count');
-            const colDiv = document.getElementById('columns');
-
-            try {
-                // 嘗試讀取資料
-                const { data, error } = await supabase
-                    .from(TABLE_NAME)
-                    .select('*');
-
-                if (error) {
-                    statusDiv.innerHTML = `<span class="text-red-600">❌ 錯誤: ${error.message}</span>`;
-                    rawDiv.textContent = JSON.stringify(error, null, 2);
-                    return;
-                }
-
-                if (data.length === 0) {
-                    statusDiv.innerHTML = `<span class="text-orange-600">⚠️ 連線成功，但回傳 0 筆資料。</span>`;
-                    rawDiv.textContent = "[] (空陣列)";
-                    alert("請檢查 Supabase 的 RLS 設定 (Row Level Security) 是否已關閉，或是否已加入 Policy。");
-                    return;
-                }
-
-                // 成功讀取
-                statusDiv.innerHTML = `<span class="text-green-600">✅ 成功讀取！</span>`;
-                countDiv.textContent = data.length;
+      {isOpen && (
+        <div className="p-4 pt-0 border-t border-slate-100 bg-slate-50/50">
+          <div className="space-y-6 mt-4">
+            {day.activities.map((item, idx) => (
+              <div key={idx} className="relative pl-6 border-l-2 border-slate-200 last:border-0">
+                <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white ${item.type === 'dining' ? 'bg-orange-400' : 'bg-indigo-400'}`}></div>
                 
-                // 顯示欄位名稱
-                const keys = Object.keys(data[0]);
-                colDiv.textContent = keys.join(', ');
+                <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold px-2 py-1 rounded text-white ${item.type === 'dining' ? 'bg-orange-400' : 'bg-indigo-400'}`}>
+                        {item.time}
+                      </span>
+                      <h4 className="font-bold text-lg">{item.name}</h4>
+                    </div>
+                    {item.rating && (
+                      <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-full border border-yellow-100">
+                        <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                        <span className="text-xs font-bold text-yellow-700">{item.rating}</span>
+                      </div>
+                    )}
+                  </div>
 
-                // 顯示第一筆資料
-                rawDiv.textContent = JSON.stringify(data[0], null, 2);
+                  <div className="flex flex-wrap gap-4 text-sm text-slate-600 mb-3">
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-4 h-4" /> {item.location}
+                    </div>
+                    {item.budget && (
+                      <div className="flex items-center gap-1 text-green-600 font-medium">
+                        <DollarSign className="w-4 h-4" /> {item.budget}
+                      </div>
+                    )}
+                  </div>
 
-            } catch (err) {
-                statusDiv.textContent = "程式執行錯誤: " + err.message;
-            }
-        }
+                  {item.type === 'dining' && item.mustTry && (
+                    <div className="mb-3">
+                      <p className="text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider flex items-center gap-1">
+                        <Utensils className="w-3 h-3" /> 必食推介
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {item.mustTry.map((dish, dIdx) => (
+                          <span key={dIdx} className="text-xs bg-orange-50 text-orange-700 px-2 py-1 rounded border border-orange-100">
+                            {dish}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-        testConnection();
-    </script>
-</body>
-</html>
+                  {item.type === 'activity' && (
+                     <div className="mb-3 bg-indigo-50 p-3 rounded-md border border-indigo-100">
+                        <p className="text-sm font-bold text-indigo-900 mb-1">{item.highlight}</p>
+                        <p className="text-xs text-indigo-700">{item.description}</p>
+                     </div>
+                  )}
+
+                  {item.tips && (
+                    <div className="mt-3 text-xs bg-slate-100 text-slate-600 p-2 rounded flex gap-2 items-start">
+                      <Info className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
+                      <span>{item.tips}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default function HolidayPlanner() {
+  const [openStates, setOpenStates] = useState({
+    0: true, // Open first day by default
+    1: false,
+    2: true, // Open Anniversary
+    3: false,
+    4: false
+  });
+
+  const toggleDay = (index) => {
+    setOpenStates(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
+
+  // Calculate total budget range
+  const minTotal = 5900;
+  const maxTotal = 6800;
+
+  return (
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
+      <div className="max-w-3xl mx-auto">
+        
+        {/* Header */}
+        <header className="mb-8 text-center">
+          <h1 className="text-3xl font-extrabold text-slate-900 mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+            節日慶祝行程表
+          </h1>
+          <p className="text-slate-500">聖誕 · 紀念日 · 生日 · 除夕</p>
+        </header>
+
+        {/* Budget Summary Card */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-slate-500 flex items-center gap-2">
+                <DollarSign className="w-4 h-4" /> 總預算估算 (2人)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-slate-800">${minTotal.toLocaleString()} - {maxTotal.toLocaleString()}</div>
+              <p className="text-xs text-slate-400 mt-1">含 10% 服務費</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-slate-500 flex items-center gap-2">
+                <Utensils className="w-4 h-4" /> 重點餐廳
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-slate-800">6 間</div>
+              <p className="text-xs text-slate-400 mt-1">含 1 間 Fine Dining</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white border-none shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-amber-100 flex items-center gap-2">
+                <Star className="w-4 h-4" /> 特別日子
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">紀念日 & 生日</div>
+              <p className="text-xs text-amber-100 mt-1">12月28日 & 29日</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Itinerary List */}
+        <div className="space-y-2">
+          {itineraryData.map((day, index) => (
+            <ItineraryCard 
+              key={index} 
+              day={day} 
+              isOpen={openStates[index]} 
+              toggleOpen={() => toggleDay(index)} 
+            />
+          ))}
+        </div>
+
+        {/* Footer */}
+        <footer className="mt-12 text-center text-slate-400 text-sm pb-8">
+          <p>預算僅供參考，實際價格視乎當日點餐而定。</p>
+          <p className="mt-1">祝您們有一個愉快的假期！✨</p>
+        </footer>
+
+      </div>
+    </div>
+  );
+}
